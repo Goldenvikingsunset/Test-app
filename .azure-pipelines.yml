@@ -1,0 +1,91 @@
+# File: Azure-pipelines.yml
+# 
+# Author: Kamil (Kine) Sacek
+#
+# To use, place this file into root of your git repository and push to the Azure DevOps repository. 
+# Build pipeline will be created automagically and will build your app when you will go to create build pipeline
+# for your repository. After creating, you need to set variable USER.PASSWORD for the pipeline to work correctly.
+#
+# Prerequisities:
+#   Service connection with name "GitHub" leading to GitHub in your Azure DevOps Project.
+#   If the service connection have another name, change the name in "endpoint:" line.
+#
+#   To use CodeSigning Certificate, You can place it to some shared folder and set the password for it.
+#   If used on Agent with Domain, you can create certificate without password but secured with access for
+#   specific users. In this case do not fill the CertPwd variable.
+#
+#   By default, windows authentication is used. Thus the process needs the password for user account, under
+#   which the agent is running (thus only hosted agent is possible for now). You need to set variable on the 
+#   pipeline to set variable USER.PASSWORD with the password. I recommend to use Variable group to be able
+#   to assign it in repeatable way to all pipelines.
+
+resources:
+  repositories:
+  - repository: MSDYN365BC_Yaml
+    type: github
+    name: kine/MSDYN365BC_Yaml
+    ref: 'refs/heads/master'
+    endpoint: GitHub
+  - repository: self
+    checkoutOptions:
+      submodules: true
+
+variables:
+  TestCodeunitId: 130402
+  UserPwd: '$(USER.PASSWORD)'  #Variable USER.PASSWORD must exists and have password for the account under which the agent is running
+  CertFile: ''
+  CertPwd: ''
+
+pool:
+  name: Default     #Using default agent pool
+  demands: docker   #Agent must support docker
+
+trigger: 
+- master    #Trigger only for master branch or PR if set in PR
+
+steps:
+- checkout: self
+  submodules: true
+  
+- task: NuGetToolInstaller@0
+  displayName: 'Install Nuget'
+
+- template: Templates/InstallModules.yml@MSDYN365BC_Yaml
+
+- template: Templates/PrepareEnv.yml@MSDYN365BC_Yaml
+  parameters:
+    pwd: $(UserPwd)
+
+- template: Templates/SetAppBuildNo.yml@MSDYN365BC_Yaml
+  parameters:
+    UpdateDevOpsBuildNo: 1
+
+- template: Templates/CompileALApps.yml@MSDYN365BC_Yaml
+  parameters:
+    CertPath: $(CertFile)
+    CertPwd: $(CertPwd)
+    pwd: $(UserPwd)
+
+- template: Templates/InstallALApps.yml@MSDYN365BC_Yaml
+  parameters:
+    CertPath: $(CertFile)
+
+- template: Templates/TestALApp.yml@MSDYN365BC_Yaml
+  parameters:
+    TrxFile: TestResults.trx
+    TestCodeunitId: $(TestCodeunitId)
+    pwd: $(UserPwd)
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: App'
+  inputs:
+    ArtifactName: App
+
+- task: PublishTestResults@2
+  displayName: 'Publish Test Results **\Test*.trx'
+  inputs:
+    testRunner: VSTest
+    testResultsFiles: '**\Test*.trx'
+  condition: succeededOrFailed()
+
+- template: Templates/RemoveEnv.yml@MSDYN365BC_Yaml
