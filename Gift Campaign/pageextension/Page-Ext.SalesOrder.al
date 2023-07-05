@@ -1,3 +1,6 @@
+/// <summary>
+/// PageExtension SalesOrderExt_REN (ID 50100) extends Record Sales Order.
+/// </summary>
 pageextension 50100 SalesOrderExt_REN extends "Sales Order"
 {
     actions
