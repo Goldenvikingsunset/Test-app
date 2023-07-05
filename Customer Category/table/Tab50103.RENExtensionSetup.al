@@ -1,10 +1,10 @@
 /// <summary>
-/// Table Packt Extension Setup (ID 50103).
+/// Table REN Extension Setup (ID 50103).
 /// </summary>
-table 50103 "Packt Extension Setup"
+table 50103 "REN Extension Setup"
 {
     DataClassification = CustomerContent;
-    Caption = 'Packt Extension Setup';
+    Caption = 'REN Extension Setup';
 
     fields
     {
