@@ -1,3 +1,6 @@
+/// <summary>
+/// Table Packt Extension Setup (ID 50103).
+/// </summary>
 table 50103 "Packt Extension Setup"
 {
     DataClassification = CustomerContent;
